@@ -1,7 +1,11 @@
 package jp.sio.testapp.mylocation.Service;
 
+import android.Manifest;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -9,9 +13,14 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.app.Service;
 import android.os.IBinder;
+import android.os.PowerManager;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.os.Handler;
 
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -25,24 +34,28 @@ import jp.sio.testapp.mylocation.Repository.LocationLog;
  * Created by NTT docomo on 2017/05/22.
  */
 
-public class UebService extends Service implements LocationListener{
+public class UebService extends Service implements LocationListener {
 
     LocationManager locationManager;
     LocationLog locationLog;
+    PowerManager powerManager;
+    PowerManager.WakeLock wakeLock;
 
-    private Handler fixHandler;
-    private Timer stopTimer;
-    private Handler stopHandler;
-    private Timer intervalTimer;
+    private Handler resultHandler;
     private Handler intervalHandler;
+    private Handler stopHandler;
+    private Timer stopTimer;
+    private Timer intervalTimer;
     private StopTimerTask stopTimerTask;
     private IntervalTimerTask intervalTimerTask;
 
-    //設定の測位回数、測位間隔、測位タイムアウト、SuplEndWaitTime
-    private int settingCount;
-    private int settingInterval;
-    private int settingTimeout;
+    //設定値の格納用変数
+    private int settingCount;   // 0の場合は無制限に測位を続ける
+    private long settingInterval;
+    private long settingTimeout;
+    private boolean settingIsCold;
     private int settingSuplEndWaitTime;
+    private int settingDelAssistdatatime;
 
     //測位中の測位回数
     private int runningCount;
@@ -50,79 +63,175 @@ public class UebService extends Service implements LocationListener{
     //測位成功の場合:true 測位失敗の場合:false を設定
     private boolean isLocationFix;
 
-    public class UebService_Binder extends Binder{
-        public UebService getService(){
+    //測位開始時間、終了時間
+    private Calendar calendar = Calendar.getInstance();
+    private long locationStartTime;
+    private long locationStopTime;
+    SimpleDateFormat simpleDateFormatyyyy = new SimpleDateFormat("yyyyMMdd");
+    SimpleDateFormat simpleDateFormatHH = new SimpleDateFormat("HH:mm:ss.sss");
+
+
+    public class UebService_Binder extends Binder {
+        public UebService getService() {
             return UebService.this;
         }
     }
 
-    //TODO:
-    //サービスがKillされるのを防止する処理
-    // Android 6.0 以降の省電力の処理確認してから作る予定
-
-    //TODO:
-    //スリープ時に停止するのを防止
-    //これもAndroid 6.0 以降の省電力の処理確認してから作る予定
-    //PowerManagerを使う
-
     @Override
-    public void onCreate(){
+    public void onCreate() {
         super.onCreate();
 
-        fixHandler = new Handler();
+        resultHandler = new Handler();
         intervalHandler = new Handler();
         stopHandler = new Handler();
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startid){
-        super.onStartCommand(intent,flags,startid);
-        Log.d(this.getPackageName().getClass().getName(),"onStartCommand");
+    public int onStartCommand(Intent intent, int flags, int startid) {
+        super.onStartCommand(intent, flags, startid);
+        L.d("onStartCommand");
 
-        settingCount = intent.getIntExtra(getBaseContext().getString(R.string.settingCount),0);
-        settingTimeout = intent.getIntExtra(getBaseContext().getString(R.string.settingTimeout),0);
-        settingInterval = intent.getIntExtra(getBaseContext().getString(R.string.settingInterval),0);
-        L.d("count:" + settingCount + " Timeout:" + settingTimeout + " Interval" + settingInterval);
+        //サービスがKillされるのを防止する処理
+        //サービスがKillされにくくするために、Foregroundで実行する
+        Notification notification = new Notification();
+        startForeground(1, notification);
+
+        //画面が消灯しないようにする処理
+        //画面が消灯しないようにPowerManagerを使用
+        powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        //画面つけっぱなし設定、非推奨の設定値だが試験アプリ的にはあったほうがいいので使用
+        wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, getString(R.string.locationUeb));
+        wakeLock.acquire();
+
+        //設定値の取得
+        // *1000は sec → msec の変換
+        settingCount = intent.getIntExtra(getBaseContext().getString(R.string.settingCount), 0);
+        settingTimeout = intent.getLongExtra(getBaseContext().getString(R.string.settingTimeout), 0) * 1000;
+        settingInterval = intent.getLongExtra(getBaseContext().getString(R.string.settingInterval), 0) * 1000;
+        settingIsCold = intent.getBooleanExtra(getBaseContext().getString(R.string.settingIsCold), true);
+        settingSuplEndWaitTime = intent.getIntExtra(getResources().getString(R.string.settingSuplEndWaitTime), 0) * 1000;
+        settingDelAssistdatatime = intent.getIntExtra(getResources().getString(R.string.settingDelAssistdataTime), 0) * 1000;
+        runningCount = 0;
+
+        //ログファイルの生成
+        locationLog = new LocationLog();
+        locationLog.makeLogFile();
+        L.d("count:" + settingCount + " Timeout:" + settingTimeout + " Interval:" + settingInterval);
+        L.d("suplendwaittime" + settingSuplEndWaitTime + " " + "DelAssist" + settingDelAssistdatatime);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         locationStart();
+
         return START_STICKY;
     }
 
     /**
      * 測位を開始する時の処理
      */
-    public void locationStart(){
-        locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+    public void locationStart() {
 
-        //TODO:設定でColdすることになっているならって判定を入れる
-        coldLocation(locationManager);
+        L.d("locationStart");
 
-        stopTimer = null;
-        //MyLocationUsecaseで起動時にPermissionCheckを行っているので
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,0,0,this);
+        if (settingIsCold) {
+            coldLocation(locationManager);
+        }
+        locationStartTime = System.currentTimeMillis();
+        //MyLocationUsecaseで起動時にPermissionCheckを行っているのでここでは行わない
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
         L.d("requestLocationUpdates");
 
         //測位停止Timerの設定
-        if(stopTimer == null){
-            stopTimerTask = new StopTimerTask();
-            stopTimer = new Timer(true);
-            stopTimer.schedule(stopTimerTask,settingTimeout);
-        }
-        //TODO: 測位開始の時刻を取得する処理を追加する
+        L.d("SetStopTimer");
+        stopTimerTask = new StopTimerTask();
+        stopTimer = new Timer(true);
+        stopTimer.schedule(stopTimerTask,settingTimeout);
     }
 
     /**
-     * 測位が終わって、次の測位を行う準備処理
+     * 測位成功の場合の処理
      */
-    public void locationStop(){
+    public void locationSuccess(final Location location){
+        L.d("locationSuccess");
+        //測位終了の時間を取得
+        locationStopTime = System.currentTimeMillis();
+        //測位タイムアウトのタイマーをクリア
+        stopTimer.cancel();
+        runningCount++;
+        isLocationFix = true;
 
+        //測位結果の通知
+        resultHandler.post(new Runnable() {
+            long ttff = (locationStopTime - locationStartTime) / 1000;
+            @Override
+            public void run() {
+                L.d("resultHandler.post");
+                sendLocationBroadCast(isLocationFix,location.getLatitude(),location.getLongitude(),ttff);
+            }
+        });
+        locationLog.writeLog();
+        L.d(location.getLatitude() + " " + location.getLongitude());
+
+        try {
+            Thread.sleep(settingSuplEndWaitTime);
+        } catch (InterruptedException e) {
+            L.d(e.getMessage());
+            e.printStackTrace();
+        }
+        locationManager.removeUpdates(this);
+
+        //測位回数が設定値に到達しているかチェック
+        if(runningCount == settingCount && settingCount != 0){
+            serviceStop();
+        }else{
+            //回数満了してなければ測位間隔Timerを設定して次の測位の準備
+            L.d("SuccessのIntervalTimer");
+            intervalTimerTask = new IntervalTimerTask();
+            intervalTimer = new Timer(true);
+            L.d("Interval:" + settingInterval);
+            intervalTimer.schedule(intervalTimerTask, settingInterval);
+        }
+    }
+
+    /**
+     * 測位失敗の場合の処理
+     * 今のところタイムアウトした場合のみを想定
+     */
+    public void locationFailed(){
+        L.d("locationFailed");
+        //測位終了の時間を取得
+        locationStopTime = System.currentTimeMillis();
+        runningCount++;
+        isLocationFix = false;
+        locationManager.removeUpdates(this);
+
+        //測位結果の通知
+        resultHandler.post(new Runnable() {
+            long ttff = (locationStopTime - locationStartTime) / 1000;
+            @Override
+            public void run() {
+                L.d("resultHandler.post");
+                sendLocationBroadCast(isLocationFix,-1,-1,ttff);
+            }
+        });
+
+        //測位回数が設定値に到達しているかチェック
+        if(settingCount == runningCount && settingCount != 0){
+            serviceStop();
+        }else{
+            L.d("FailedのIntervalTimer");
+            //回数満了してなければ測位間隔Timerを設定して次の測位の準備
+            intervalTimerTask = new IntervalTimerTask();
+            intervalTimer = new Timer(true);
+            L.d("Interval:" + settingInterval);
+            intervalTimer.schedule(intervalTimerTask, settingInterval);
+        }
     }
     /**
      * 測位が終了してこのServiceを閉じるときの処理
      * 測位回数満了、停止ボタンによる停止を想定した処理
      */
     public void serviceStop(){
+        L.d("serviceStop");
         if(locationManager != null){
-            //TODO: suplEndWaitTime待つ処理を入れる
             locationManager.removeUpdates(this);
             locationManager = null;
         }
@@ -134,32 +243,29 @@ public class UebService extends Service implements LocationListener{
             intervalTimer.cancel();
             intervalTimer = null;
         }
-        //TODO: サービスがKillされるのを防ぐのにAlarmManagerを使ってたらそれもここで消す
-        //TODO: スリープ時の停止を防止するのにPowerManagerを使っていたらそれもここで消す
-        //TODO: ログ保存にReader、Writerを使ってたらそれもここで消す
+        //Serviceを終わるときにForegroundも停止する
+        stopForeground(true);
+        sendServiceEndBroadCast();
+
+        wakeLock.release();
+        if(powerManager != null) {
+            powerManager = null;
+        }
+        try {
+            locationLog.endLogFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void onLocationChanged(final Location location) {
-        isLocationFix = true;
-
-        //TODO: 測位成功の時間を取得する処理を追加する
-
-        fixHandler.post(new Runnable() {
-            double ttff = 20.0;
-            @Override
-            public void run() {
-                L.d("fixHandler.post");
-                sendBroadCast(isLocationFix,location.getLatitude(),location.getLongitude(),ttff);
-            }
-        });
-        L.d(location.getLatitude() + " " + location.getLongitude());
-        locationManager.removeUpdates(this);
+        locationSuccess(location);
     }
 
     @Override
     public void onDestroy(){
-        Log.d(this.getPackageName().getClass().getName(),"onDestroy");
+        L.d("onDestroy");
         serviceStop();
         super.onDestroy();
     }
@@ -168,9 +274,18 @@ public class UebService extends Service implements LocationListener{
      * アシストデータの削除
      */
     private void coldLocation(LocationManager lm){
+        sendColdBroadCast(getResources().getString(R.string.categoryColdStart));
+        L.d("coldBroadcast:" + getResources().getString(R.string.categoryColdStart));
         boolean coldResult = lm.sendExtraCommand(LocationManager.GPS_PROVIDER,"delete_aiding_data",null);
+        try {
+            Thread.sleep(settingDelAssistdatatime);
+        } catch (InterruptedException e) {
+            L.d(e.getMessage());
+            e.printStackTrace();
+        }
+
         L.d("delete_aiding_data:result " + coldResult);
-        //TODO 削除中であることを通知して3秒ぐらい待つ処理を上に投げたい
+        sendColdBroadCast(getResources().getString(R.string.categoryColdStop));
     }
 
     /**
@@ -184,16 +299,8 @@ public class UebService extends Service implements LocationListener{
             stopHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    isLocationFix = false;
-                    //TODO:TTFFを計測した値いれること。
-                    sendBroadCast(isLocationFix, -1, -1, 0);
-                    //TODO:測位回数のチェックをして回数を満了していなかったらInterval後、測位再開する
-                    //測位停止Timerの設定
-                    if(intervalTimer == null){
-                        intervalTimerTask = new IntervalTimerTask();
-                        intervalTimer = new Timer(true);
-                        intervalTimer.schedule(intervalTimerTask,settingInterval);
-                    }
+                    L.d("StopTimerTask");
+                    locationFailed();
                 }
             });
         }
@@ -207,18 +314,59 @@ public class UebService extends Service implements LocationListener{
 
         @Override
         public void run() {
-            locationStart();
+            intervalHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    L.d("IntervalTimerTask");
+                    locationStart();
+                }
+            });
         }
     }
 
-    protected void sendBroadCast(Boolean fix,double lattude,double longitude,double ttff){
-        L.d("send");
+    /**
+     * 測位完了を上に通知するBroadcast 測位結果を入れる
+     * @param fix 測位成功:True 失敗:False
+     * @param lattude 測位成功:緯度 測位失敗: -1
+     * @param longitude 測位成功:経度 測位失敗: -1
+     * @param ttff 測位API実行～測位停止までの時間
+     */
+    protected void sendLocationBroadCast(Boolean fix,double lattude,double longitude,double ttff){
+        L.d("sendLocation");
         Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUeb));
+        broadcastIntent.putExtra(getResources().getString(R.string.category),getResources().getString(R.string.categoryLocation));
         broadcastIntent.putExtra(getResources().getString(R.string.TagisFix),fix);
         broadcastIntent.putExtra(getResources().getString(R.string.TagLat),lattude);
         broadcastIntent.putExtra(getResources().getString(R.string.TagLong),longitude);
         broadcastIntent.putExtra(getResources().getString(R.string.Tagttff),ttff);
 
+        sendBroadcast(broadcastIntent);
+    }
+
+    /**
+     * Cold化(アシストデータ削除)の開始と終了を通知するBroadcast
+     * 削除開始:categoryColdStart 削除終了:categoryColdStop
+     * @param category
+     */
+    protected void sendColdBroadCast(String category){
+        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUeb));
+
+        if(category.equals(getResources().getString(R.string.categoryColdStart))){
+            L.d("ColdStart");
+            broadcastIntent.putExtra(getResources().getString(R.string.category),getResources().getString(R.string.categoryColdStart));
+        }else if(category.equals(getResources().getString(R.string.categoryColdStop))){
+            L.d("ColdStop");
+            broadcastIntent.putExtra(getResources().getString(R.string.category),getResources().getString(R.string.categoryColdStop));
+        }
+        sendBroadcast(broadcastIntent);
+    }
+
+    /**
+     * Serviceを破棄することを通知するBroadcast
+     */
+    protected void sendServiceEndBroadCast(){
+        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUeb));
+        broadcastIntent.putExtra(getResources().getString(R.string.category),getResources().getString(R.string.categoryServiceEnd));
         sendBroadcast(broadcastIntent);
     }
 

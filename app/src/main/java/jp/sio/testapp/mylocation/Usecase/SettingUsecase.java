@@ -20,12 +20,6 @@ public class SettingUsecase {
         settingPref = new SettingPref(context);
         settingPref.createPref();
     }
-    public String getTestParam(){
-        return settingPref.getTestParam();
-    }
-    public void setTestParam(String str){
-        settingPref.setTestParam(str);
-    }
 
 
     /**
@@ -34,5 +28,21 @@ public class SettingUsecase {
      */
     public void setDefaultSetting(){
 
+    }
+    //とりあえずテスト用の仮数値
+    public int getCount(){
+        return 5;
+    }
+
+    public double getTimeout(){
+        return 10.0;
+    }
+
+    public double getInterval(){
+        return 10.0;
+    }
+
+    public void commitSetting(){
+        settingPref.commitSetting();
     }
 }

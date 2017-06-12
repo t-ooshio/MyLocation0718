@@ -18,6 +18,8 @@ import jp.sio.testapp.mylocation.R;
 import jp.sio.testapp.mylocation.Service.UebService;
 import jp.sio.testapp.mylocation.Usecase.MyLocationUsecase;
 import jp.sio.testapp.mylocation.Usecase.SettingUsecase ;
+
+
 /**
  * Created by NTT docomo on 2017/05/23.
  * ActivityとServiceの橋渡し
@@ -30,6 +32,12 @@ public class MyLocationPresenter {
     MyLocationUsecase myLocationUsecase;
     Intent settingIntent;
     Intent locationserviceIntent;
+
+    private String receiveCategory;
+    private String categoryLocation;
+    private String categoryColdStart;
+    private String categoryColdStop;
+    private String categoryServiceStop;
 
     private UebService uebService;
     private ServiceConnection serviceConnectionUeb = new ServiceConnection() {
@@ -46,12 +54,15 @@ public class MyLocationPresenter {
 
     private final LocationReceiver locationReceiver = new LocationReceiver();
 
-    private String testStr;
-
     public MyLocationPresenter(MyLocationActivity activity){
         this.activity = activity;
         myLocationUsecase = new MyLocationUsecase(activity);
         settingUsecase = new SettingUsecase(this.activity.getApplicationContext());
+
+        categoryLocation = activity.getResources().getString(R.string.categoryLocation);
+        categoryColdStart = activity.getResources().getString(R.string.categoryColdStart);
+        categoryColdStop = activity.getResources().getString(R.string.categoryColdStop);
+        categoryServiceStop = activity.getResources().getString(R.string.categoryServiceEnd);
     }
 
     public void checkPermission(){
@@ -59,18 +70,23 @@ public class MyLocationPresenter {
     }
 
     public void locationStart(){
-        settingUsecase.setTestParam("MyLocationTest");
-        testStr = settingUsecase.getTestParam();
-        activity.showTextView(testStr);
 
         //TODO どの測位を行うかをSettingから読み込み、実行するServiceを選択する処理を追加する
         locationserviceIntent = new Intent(activity.getApplicationContext(),UebService.class);
 
         //TODO:とりあえずテスト用の適当数値を設定 あとで設定から読むように変える
-        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingCount),1);
-        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingTimeout),30);
-        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingInterval),30);
-
+        int count = 20;
+        long timeout = 30;
+        long interval = 30;
+        boolean isCold = true;
+        int suplendwaittime = 3;
+        int delassisttime = 3;
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingCount),count);
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingTimeout),timeout);
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingInterval),interval);
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingIsCold),isCold);
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingSuplEndWaitTime),suplendwaittime);
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingDelAssistdataTime),delassisttime);
         activity.startService(locationserviceIntent);
         IntentFilter filter = new IntentFilter(activity.getResources().getString(R.string.locationUeb));
         activity.registerReceiver(locationReceiver,filter);
@@ -78,20 +94,13 @@ public class MyLocationPresenter {
     }
 
     public void locationStop(){
+        activity.unbindService(serviceConnectionUeb);
         activity.stopService(locationserviceIntent);
     }
 
     public void settingStart(){
         settingIntent = new Intent(activity.getApplicationContext(), SettingActivity.class);
         activity.startActivity(settingIntent);
-    }
-
-    public void startProgressDialog(String message){
-        activity.startProgressDialog(message);
-    }
-
-    public void stopProgressDialog(){
-        activity.stopProgressDialog();
     }
 
     public void showToast(String message){
@@ -105,12 +114,29 @@ public class MyLocationPresenter {
         @Override
         public void onReceive(Context context, Intent intent) {
             Bundle bundle = intent.getExtras();
-            isFix = bundle.getBoolean(activity.getResources().getString(R.string.TagisFix));
-            lattude = bundle.getDouble(activity.getResources().getString(R.string.TagLat));
-            longitude = bundle.getDouble(activity.getResources().getString(R.string.TagLong));
-            ttff = bundle.getDouble(activity.getResources().getString(R.string.Tagttff));
-            L.d("onReceive");
-            L.d(isFix + "," + lattude + "," + longitude + "," + ttff );
+            receiveCategory = bundle.getString(activity.getResources().getString(R.string.category));
+
+            if(receiveCategory.equals(categoryLocation)){
+                isFix = bundle.getBoolean(activity.getResources().getString(R.string.TagisFix));
+                lattude = bundle.getDouble(activity.getResources().getString(R.string.TagLat));
+                longitude = bundle.getDouble(activity.getResources().getString(R.string.TagLong));
+                ttff = bundle.getDouble(activity.getResources().getString(R.string.Tagttff));
+                L.d("onReceive");
+                L.d(isFix + "," + lattude + "," + longitude + "," + ttff );
+
+            }else if(receiveCategory.equals(categoryColdStart)){
+                L.d("ReceiceColdStart");
+                showToast("アシストデータ削除中");
+            }else if(receiveCategory.equals(categoryColdStop)){
+                L.d("ReceiceColdStop");
+                showToast("アシストデータ削除終了");
+            }else if(receiveCategory.equals(categoryServiceStop)){
+                L.d("ServiceStop");
+                showToast("測位サービス終了");
+                activity.onBtnStart();
+                activity.offBtnStop();
+                activity.onBtnSetting();
+            }
         }
     }
 }

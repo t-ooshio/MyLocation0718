@@ -16,6 +16,9 @@ public class SettingPresenter {
         this.activity = activity;
         usecase = new SettingUsecase(this.activity.getApplicationContext());
     }
+    public void commitSetting(){
+        usecase.commitSetting();
+    }
 
     public void setSetting(){
 

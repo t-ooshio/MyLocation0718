@@ -2,6 +2,9 @@ package jp.sio.testapp.mylocation;
 
 import android.util.Log;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Created by NTT docomo on 2017/05/26.
  * Log.d,Log.eにクラス名、メソッド名、行数を表示する
@@ -25,6 +28,9 @@ public class L {
      * @return className,method,line
      */
     private static String getTag() {
+        //String regex = "&quot;[\\.]+&quot;"
+        //Pattern p = Pattern.compile(regex);
+
         final StackTraceElement trace = Thread.currentThread().getStackTrace()[4];
         final String cla = trace.getClassName();
         final String mthd = trace.getMethodName();

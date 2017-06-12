@@ -21,6 +21,8 @@ public class SettingActivity extends AppCompatActivity {
     private EditText editTextCount;
     private EditText editTextTimeout;
     private EditText editTextInterval;
+    private EditText editTextSuplEndWaitTime;
+    private EditText editTextDelAssistDataTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,10 +31,12 @@ public class SettingActivity extends AppCompatActivity {
 
         settingPresenter = new SettingPresenter(this);
 
-        buttonSet = (Button)findViewById(R.id.ButtunSet);
+        buttonSet = (Button)findViewById(R.id.buttonSetting);
         editTextCount = (EditText)findViewById(R.id.editTextCount);
         editTextTimeout = (EditText)findViewById(R.id.editTextTimeout);
         editTextInterval = (EditText)findViewById(R.id.editTextInterval);
+        editTextSuplEndWaitTime = (EditText)findViewById(R.id.editTextSuplEndWaitTime);
+        editTextDelAssistDataTime = (EditText)findViewById(R.id.editTextDelAssistDataTime);
     }
 
     @Override
@@ -43,5 +47,10 @@ public class SettingActivity extends AppCompatActivity {
     public void onButtonSet(){
 
     }
-
+    @Override
+    protected void onDestroy(){
+        //TODO: 戻るボタンを押されたときにSetting
+        settingPresenter.commitSetting();
+        super.onDestroy();
+    }
 }
