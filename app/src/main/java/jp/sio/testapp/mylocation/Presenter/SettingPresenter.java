@@ -1,5 +1,7 @@
 package jp.sio.testapp.mylocation.Presenter;
 
+import android.app.Activity;
+
 import jp.sio.testapp.mylocation.Activity.SettingActivity;
 import jp.sio.testapp.mylocation.Usecase.SettingUsecase;
 
@@ -10,17 +12,36 @@ import jp.sio.testapp.mylocation.Usecase.SettingUsecase;
 
 public class SettingPresenter {
     SettingActivity activity;
-    SettingUsecase usecase;
+    SettingUsecase settingusecase;
 
     public SettingPresenter(SettingActivity activity){
         this.activity = activity;
-        usecase = new SettingUsecase(this.activity.getApplicationContext());
+        settingusecase = new SettingUsecase(activity);
     }
+
+    /**
+     * 現在Activityに入力されている値を保存する
+     */
     public void commitSetting(){
-        usecase.commitSetting();
+        //TODO :SettingActivityから値取得する処理書く settingusecase.setLocationType(activity.getLocationType());
+        settingusecase.setCount(activity.getCount());
+        settingusecase.setInterval(activity.getInterval());
+        settingusecase.setTimeout(activity.getTimeout());
+        //TODO :SettingActivityから値取得する処理書くsettingusecase.setIsCold(activity.getIsCold);
+        settingusecase.setDelAssistDataTime(activity.getDelAssistDataTime());
+        settingusecase.setSuplEndWaitTIme(activity.getSuplEndWaitTime());
+        settingusecase.commitSetting();
     }
-
-    public void setSetting(){
-
+    /**
+     * 現在保存されている値をActivityに表示する
+     */
+    public void loadSetting(){
+        //TODO: loationTypeを読み込む処理を書く
+        activity.setCount(settingusecase.getCount());
+        activity.setInterval(settingusecase.getInterval());
+        activity.setTimeout(settingusecase.getTimeout());
+        //TODO: isColdを読み込む処理を書く
+        activity.setDelAssistDataTime(settingusecase.getDelAssistDataTime());
+        activity.setSuplEndWaitTime(settingusecase.getSuplEndWaitTime());
     }
 }

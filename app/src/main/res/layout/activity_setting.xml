@@ -7,28 +7,67 @@
     tools:context="jp.sio.testapp.mylocation.Activity.SettingActivity">
 
     <ScrollView
-        android:layout_width="0dp"
-        android:layout_height="495dp"
-        tools:layout_editor_absoluteY="8dp"
-        tools:layout_editor_absoluteX="8dp">
+        android:layout_width="368dp"
+        android:layout_height="wrap_content"
+        tools:layout_editor_absoluteX="8dp"
+        tools:layout_editor_absoluteY="0dp"
+        tools:ignore="MissingConstraints">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" >
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/textViewLocationList"
+                android:text="@string/locationList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+            <RadioGroup
+                android:id="@+id/radiogroupPositioningType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:layout_constraintTop_toBottomOf="@+id/textViewLocationList"
+                >
+                <RadioButton
+                    android:id="@+id/rbUeb"
+                    android:text="@string/locationUeb"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+                <RadioButton
+                    android:id="@+id/rbUea"
+                    android:text="@string/locationUea"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+                <RadioButton
+                    android:id="@+id/rbNw"
+                    android:text="@string/locationNw"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+                <RadioButton
+                    android:id="@+id/rbFlp"
+                    android:text="@string/locationFlp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+                <RadioButton
+                    android:id="@+id/rbiArea"
+                    android:text="@string/locationiArea"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
 
+            </RadioGroup>
             <TextView
                 android:id="@+id/textView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/settingCount" />
+                android:text="@string/settingCount"
+                app:layout_constraintTop_toBottomOf="@+id/radiogroupPositioningType"
+                />
 
             <EditText
-                android:id="@+id/editText"
+                android:id="@+id/editTextCount"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="number|numberSigned|numberDecimal"
-                android:text="0"
                 app:layout_constraintTop_toBottomOf="@+id/TextViewCount" />
 
             <TextView
@@ -39,11 +78,10 @@
                 app:layout_constraintTop_toBottomOf="@+id/editTextCount" />
 
             <EditText
-                android:id="@+id/editText2"
+                android:id="@+id/editTextTimeout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="number|numberSigned|numberDecimal"
-                android:text="0"
                 app:layout_constraintTop_toBottomOf="@+id/TextViewTimeout" />
 
             <TextView
@@ -54,11 +92,10 @@
                 app:layout_constraintTop_toBottomOf="@+id/editTextTimeout" />
 
             <EditText
-                android:id="@+id/editText3"
+                android:id="@+id/editTextInterval"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="number|numberSigned|numberDecimal"
-                android:text="0"
                 app:layout_constraintTop_toBottomOf="@+id/TextViewInterval" />
 
             <TextView
@@ -69,9 +106,10 @@
                 app:layout_constraintTop_toBottomOf="@+id/editTextInterval" />
 
             <EditText
-                android:id="@+id/editText4"
+                android:id="@+id/editTextSuplEndWaitTime"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:inputType="number|numberSigned|numberDecimal"
                 app:layout_constraintTop_toBottomOf="@+id/TextViewSuplEndWaitTime" />
 
             <TextView
@@ -82,19 +120,32 @@
                 app:layout_constraintTop_toBottomOf="@+id/editTextSuplEndWaitTime" />
 
             <EditText
-                android:id="@+id/editText5"
+                android:id="@+id/editTextDelAssistDataTime"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:inputType="number|numberSigned|numberDecimal"
                 app:layout_constraintTop_toBottomOf="@+id/TextViewDelAssistDataTime" />
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal">
+                <TextView
+                    android:id="@+id/textViewDelAssistData"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settingActIsCold" />
+                <CheckBox
+                    android:id="@+id/checkboxIsCold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
             <Button
                 android:id="@+id/buttonSetting"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="設定反映"
-                app:layout_constraintTop_toBottomOf="@+id/editTextDelAssistDataTime" />
+                android:text="設定反映" />
         </LinearLayout>
     </ScrollView>
-
 
 </android.support.constraint.ConstraintLayout>
