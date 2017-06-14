@@ -2,6 +2,7 @@ package jp.sio.testapp.mylocation.Usecase;
 
 import android.content.Context;
 
+import jp.sio.testapp.mylocation.L;
 import jp.sio.testapp.mylocation.Repository.SettingPref;
 
 /**
@@ -48,6 +49,7 @@ public class SettingUsecase {
         settingPref.setIsCold(iscold);
     }
     public void setLocationType(String locationType){
+        L.d("Usecase:"+locationType);
         settingPref.setLocationType(locationType);
     }
 
