@@ -53,24 +53,24 @@ public class SettingPresenter {
      */
     public void loadSetting(){
         String locationType = settingusecase.getLocationType();
-        activity.enableRadioButtonUea();
-        if(locationType.equals(activity.getResources().getString(R.string.locationUeb)))
+        if(locationType.equals(activity.getResources().getString(R.string.locationUeb))) {
             activity.enableRadioButtonUeb();
-        else if(locationType.equals(activity.getResources().getString(R.string.locationUea)))
+        }else if(locationType.equals(activity.getResources().getString(R.string.locationUea))) {
             activity.enableRadioButtonUea();
-        else if(locationType.equals(activity.getResources().getString(R.string.locationNw)))
+        }else if(locationType.equals(activity.getResources().getString(R.string.locationNw))) {
             activity.enableRadioButtonNetwork();
-        else if(locationType.equals(activity.getResources().getString(R.string.locationFlp)))
+        }else if(locationType.equals(activity.getResources().getString(R.string.locationFlp))) {
             activity.enableRadioButtonFlp();
-        else if(locationType.equals(activity.getResources().getString(R.string.locationiArea)))
+        }else if(locationType.equals(activity.getResources().getString(R.string.locationiArea)))
             activity.enableRadioButtoniArea();
         activity.setCount(settingusecase.getCount());
         activity.setInterval(settingusecase.getInterval());
         activity.setTimeout(settingusecase.getTimeout());
-        if(settingusecase.getIsCold())
+        if(settingusecase.getIsCold()) {
             activity.enableIsCold();
-        else
+        }else {
             activity.disableIsCold();
+        }
         activity.setDelAssistDataTime(settingusecase.getDelAssistDataTime());
         activity.setSuplEndWaitTime(settingusecase.getSuplEndWaitTime());
     }
