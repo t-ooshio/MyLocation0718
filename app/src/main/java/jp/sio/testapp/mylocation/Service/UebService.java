@@ -1,11 +1,8 @@
 package jp.sio.testapp.mylocation.Service;
 
-import android.Manifest;
 import android.app.Notification;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -14,11 +11,8 @@ import android.os.Bundle;
 import android.app.Service;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.support.v4.app.ActivityCompat;
-import android.util.Log;
 import android.os.Handler;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Timer;
@@ -36,10 +30,10 @@ import jp.sio.testapp.mylocation.Repository.LocationLog;
 
 public class UebService extends Service implements LocationListener {
 
-    LocationManager locationManager;
-    LocationLog locationLog;
-    PowerManager powerManager;
-    PowerManager.WakeLock wakeLock;
+    private LocationManager locationManager;
+    private LocationLog locationLog;
+    private PowerManager powerManager;
+    private PowerManager.WakeLock wakeLock;
 
     private Handler resultHandler;
     private Handler intervalHandler;
@@ -123,7 +117,7 @@ public class UebService extends Service implements LocationListener {
         runningCount = 0;
 
         //ログファイルの生成
-        locationLog = new LocationLog();
+        locationLog = new LocationLog(this);
         locationLog.makeLogFile(settingHeader);
         locationLog.writeLog(
                 locationType + "," + settingCount + "," + settingTimeout
@@ -182,8 +176,11 @@ public class UebService extends Service implements LocationListener {
                 sendLocationBroadCast(isLocationFix,location.getLatitude(),location.getLongitude(),ttff);
             }
         });
-        locationLog.writeLog(locationStartTime  + "," + locationStopTime + "," + isLocationFix + ","
-                + location.getLatitude() + "," + location.getLongitude() + "," + ttff);
+        locationLog.writeLog(
+                simpleDateFormatHH.format(locationStartTime)  + "," +
+                simpleDateFormatHH.format(locationStopTime) + "," + isLocationFix + "," +
+                location.getLatitude() + "," + location.getLongitude() + "," + ttff
+        );
         L.d(location.getLatitude() + " " + location.getLongitude());
 
         try {
@@ -230,10 +227,11 @@ public class UebService extends Service implements LocationListener {
                 sendLocationBroadCast(isLocationFix,-1,-1,ttff);
             }
         });
-        locationLog.writeLog(locationStartTime  + "," + locationStopTime + "," + isLocationFix + ","
-                + "-1" + "," + "-1" + "," + ttff);
-
-
+        locationLog.writeLog(
+                simpleDateFormatHH.format(locationStartTime)  + "," +
+                simpleDateFormatHH.format(locationStopTime) + "," + isLocationFix + "," +
+                "-1" + "," + "-1" + "," + ttff
+        );
         //測位回数が設定値に到達しているかチェック
         if(settingCount == runningCount && settingCount != 0){
             serviceStop();
@@ -264,6 +262,7 @@ public class UebService extends Service implements LocationListener {
             intervalTimer.cancel();
             intervalTimer = null;
         }
+        locationLog.endLogFile();
         //Serviceを終わるときにForegroundも停止する
         stopForeground(true);
         sendServiceEndBroadCast();

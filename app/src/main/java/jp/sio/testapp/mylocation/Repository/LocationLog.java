@@ -1,20 +1,17 @@
 package jp.sio.testapp.mylocation.Repository;
 
+import android.content.Context;
+import android.media.MediaScannerConnection;
+import android.net.Uri;
 import android.os.Environment;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 
 import jp.sio.testapp.mylocation.L;
 
@@ -24,15 +21,6 @@ import jp.sio.testapp.mylocation.L;
  */
 
 public class LocationLog {
-    //-------Logの項目------------
-    private int settingCount;
-    private long settingInterval;
-    private long settingTimeout;
-    private boolean settingIsCold;
-    private int settingSuplEndWaitTime;
-    private int settingDelAssistdatatime;
-
-    private Calendar calendar = Calendar.getInstance();
     private long createLogTime;
     private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
 
@@ -40,13 +28,20 @@ public class LocationLog {
     private String fileName;
     private String filePath;
 
-    BufferedWriter writer;
+    private BufferedWriter writer;
+    //ファイルインデックス強制作成用
+    private MediaScannerConnection scanner;
+    private MediaScannerConnection.MediaScannerConnectionClient scannerConnectionClient;
+    private Context context;
+
+    public LocationLog(Context context){
+        this.context = context;
+    }
 
     /**
      * Logファイルを作成
      */
     public void makeLogFile(String settingHeader){
-        //TODO: ログファイルの生成、csv形式
         if(isExternalStrageWriteable()){
             createLogTime = System.currentTimeMillis();
             fileName = simpleDateFormat.format(createLogTime) + ".txt";
@@ -55,10 +50,22 @@ public class LocationLog {
 
             file = new File(filePath);
             file.getParentFile().mkdir();
+            scannerConnectionClient = new MediaScannerConnection.MediaScannerConnectionClient() {
+                @Override
+                public void onMediaScannerConnected() {
+
+                }
+
+                @Override
+                public void onScanCompleted(String path, Uri uri) {
+
+                }
+            };
+            scanner = new MediaScannerConnection(context,scannerConnectionClient);
+            scanner.connect();
         }else{
             L.d("ExternalStrage書き込み不可");
         }
-        //TODO: headerに設定の項目を出力
         try{
             writer = new BufferedWriter(new FileWriter(file,true));
             L.d("settingHeader:" + settingHeader);
@@ -77,24 +84,26 @@ public class LocationLog {
     }
 
     /**
-     * Logファイルを閉じる(Readerとかを閉じる処理を想定)
+     * Logファイルへの書き込み
      */
-    public void endLogFile(){
+    public void writeLog(String log){
         try {
-            writer.close();
+            L.d("Log" + log);
+            writer.write(log);
+            writer.newLine();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
     /**
-     * Logファイルへの書き込み
+     * Logファイルを閉じる(Readerとかを閉じる処理を想定)
      */
-    public void writeLog(String log){
-        //TODO:日付、時間、測位結果を出力
+    public void endLogFile(){
         try {
-            L.d("Log" + log);
-            writer.write(log);
-            writer.newLine();
+            //TODO scannerのコンストラクタにContextが必要 ここに渡すか別の床でやるか検討
+            scanner.scanFile(filePath,"txt");
+            scanner.disconnect();
+            writer.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
