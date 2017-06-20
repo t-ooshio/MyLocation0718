@@ -121,7 +121,7 @@ public class MyLocationPresenter {
                 ttff = bundle.getDouble(activity.getResources().getString(R.string.Tagttff));
                 L.d("onReceive");
                 L.d(isFix + "," + lattude + "," + longitude + "," + ttff );
-
+                activity.showTextViewResult("測位成否："+ isFix + "\n" + "緯度:" + lattude + "\n" + "軽度：" + longitude + "\n" + "TTFF：" + ttff);
             }else if(receiveCategory.equals(categoryColdStart)){
                 L.d("ReceiceColdStart");
                 showToast("アシストデータ削除中");

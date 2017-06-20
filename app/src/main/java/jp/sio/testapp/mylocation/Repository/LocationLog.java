@@ -27,8 +27,8 @@ public class LocationLog {
     private File file;
     private String fileName;
     private String filePath;
-
     private BufferedWriter writer;
+
     //ファイルインデックス強制作成用
     private MediaScannerConnection scanner;
     private MediaScannerConnection.MediaScannerConnectionClient scannerConnectionClient;
@@ -50,19 +50,6 @@ public class LocationLog {
 
             file = new File(filePath);
             file.getParentFile().mkdir();
-            scannerConnectionClient = new MediaScannerConnection.MediaScannerConnectionClient() {
-                @Override
-                public void onMediaScannerConnected() {
-
-                }
-
-                @Override
-                public void onScanCompleted(String path, Uri uri) {
-
-                }
-            };
-            scanner = new MediaScannerConnection(context,scannerConnectionClient);
-            scanner.connect();
         }else{
             L.d("ExternalStrage書き込み不可");
         }
@@ -97,17 +84,31 @@ public class LocationLog {
     }
     /**
      * Logファイルを閉じる(Readerとかを閉じる処理を想定)
+     *
      */
     public void endLogFile(){
+        scanFile();
         try {
-            //TODO scannerのコンストラクタにContextが必要 ここに渡すか別の床でやるか検討
-            scanner.scanFile(filePath,"txt");
-            scanner.disconnect();
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
+    /**
+     * ログファイルを端末再起動無しでも読み込むための処理
+     * ファイルインデックスを作成しなおせば良いと見たのでそれを実装
+     */
+    public void scanFile(){
+        MediaScannerConnection.OnScanCompletedListener listener = new MediaScannerConnection.OnScanCompletedListener() {
+            @Override
+            public void onScanCompleted(String path, Uri uri) {
+
+            }
+        };
+        MediaScannerConnection.scanFile(context, new String[]{filePath}, new String[]{"txt"},listener);
+    }
+
 
     //externalStrageのReadとWriteが可能かチェック
     private boolean isExternalStrageWriteable(){
