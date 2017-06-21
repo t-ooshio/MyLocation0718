@@ -23,6 +23,7 @@ public class MyLocationActivity extends AppCompatActivity {
     private Button buttonStop;
     private Button buttonSetting;
     private TextView tvResult;
+    private TextView tvState;
     private TextView tvSetting;
 
     private Context context = this;
@@ -39,6 +40,7 @@ public class MyLocationActivity extends AppCompatActivity {
         buttonStop = (Button)findViewById(R.id.buttonStop);
         buttonSetting = (Button)findViewById(R.id.buttonSetting);
         tvResult = (TextView)findViewById(R.id.textViewResult);
+        tvState = (TextView)findViewById(R.id.textViewState);
         tvSetting = (TextView)findViewById(R.id.textViewSetting);
 
         buttonStart.setOnClickListener(new View.OnClickListener() {
@@ -70,21 +72,23 @@ public class MyLocationActivity extends AppCompatActivity {
     protected void onStart(){
         super.onStart();
         presenter.checkPermission();
+        presenter.showSetting();
     }
     public void showTextViewResult(String str){
         tvResult.setText(str);
     }
+    public void showTextViewState(String str){tvState.setText(str);}
     public void showTextViewSetting(String str){
         tvSetting.setText(str);
     }
 
     public void pushBtnStart(){
-        showTextViewResult("測位中");
+        showTextViewState("測位中");
         presenter.locationStart();
 
     }
     public void pushBtnStop(){
-        showTextViewResult("停止");
+        showTextViewState("停止");
         presenter.locationStop();
     }
     public void pushBtnSetting(){

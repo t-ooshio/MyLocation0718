@@ -102,6 +102,10 @@ public class MyLocationPresenter {
         activity.startActivity(settingIntent);
     }
 
+    public void showSetting(){
+        activity.showTextViewSetting("showSettingTest");
+    }
+
     public void showToast(String message){
         activity.showToast(message);
     }

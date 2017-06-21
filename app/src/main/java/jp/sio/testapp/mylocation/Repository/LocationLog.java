@@ -87,8 +87,8 @@ public class LocationLog {
      *
      */
     public void endLogFile(){
-        scanFile();
         try {
+            scanFile();
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();

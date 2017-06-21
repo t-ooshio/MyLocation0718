@@ -63,7 +63,6 @@ public class UebService extends Service implements LocationListener {
     private Calendar calendar = Calendar.getInstance();
     private long locationStartTime;
     private long locationStopTime;
-    SimpleDateFormat simpleDateFormatyyyy = new SimpleDateFormat("yyyyMMdd");
     SimpleDateFormat simpleDateFormatHH = new SimpleDateFormat("HH:mm:ss.sss");
 
     //ログ出力用のヘッダー文字列 Settingのヘッダーと測位結果のヘッダー
