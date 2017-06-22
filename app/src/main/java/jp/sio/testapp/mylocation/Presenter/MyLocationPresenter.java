@@ -40,6 +40,15 @@ public class MyLocationPresenter {
     private String categoryServiceStop;
 
     private UebService uebService;
+
+    private String locationType;
+    private int count;
+    private long timeout;
+    private long interval;
+    private boolean isCold;
+    private int suplendwaittime;
+    private int delassisttime;
+
     private ServiceConnection serviceConnectionUeb = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -69,16 +78,24 @@ public class MyLocationPresenter {
         myLocationUsecase.hasPermissions();
     }
 
+    public void mStart(){
+        locationType = settingUsecase.getLocationType();
+        count = settingUsecase.getCount();
+        timeout = settingUsecase.getTimeout();
+        interval = settingUsecase.getInterval();
+        isCold = settingUsecase.getIsCold();
+        suplendwaittime = settingUsecase.getSuplEndWaitTime();
+        delassisttime = settingUsecase.getDelAssistDataTime();
+
+        activity.showTextViewSetting("測位方式:" + locationType + "\n" + "測位回数:" + count + "\n" + "タイムアウト:" + timeout + "\n" +
+                "測位間隔:" + interval + "\n" + "Cold:" + isCold + "\n"
+                + "suplEndWaitTime:" + suplendwaittime + "\n" + "アシストデータ削除時間:" + delassisttime + "\n");
+        activity.showTextViewState(activity.getResources().getString(R.string.locationStop));
+    }
+
     public void locationStart(){
 
-        //TODO どの測位を行うかをSettingから読み込み、実行するServiceを選択する処理を追加する
         locationserviceIntent = new Intent(activity.getApplicationContext(),UebService.class);
-         int count = settingUsecase.getCount();
-         long timeout = settingUsecase.getTimeout();
-         long interval = settingUsecase.getInterval();
-         boolean isCold = settingUsecase.getIsCold();
-         int suplendwaittime = settingUsecase.getSuplEndWaitTime();
-         int delassisttime = settingUsecase.getDelAssistDataTime();
 
         locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingCount),count);
         locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingTimeout),timeout);
@@ -102,10 +119,6 @@ public class MyLocationPresenter {
         activity.startActivity(settingIntent);
     }
 
-    public void showSetting(){
-        activity.showTextViewSetting("showSettingTest");
-    }
-
     public void showToast(String message){
         activity.showToast(message);
     }
@@ -126,14 +139,17 @@ public class MyLocationPresenter {
                 L.d("onReceive");
                 L.d(isFix + "," + lattude + "," + longitude + "," + ttff );
                 activity.showTextViewResult("測位成否："+ isFix + "\n" + "緯度:" + lattude + "\n" + "軽度：" + longitude + "\n" + "TTFF：" + ttff);
+                activity.showTextViewState(activity.getResources().getString(R.string.locationWait));
             }else if(receiveCategory.equals(categoryColdStart)){
                 L.d("ReceiceColdStart");
+                activity.showTextViewState(activity.getResources().getString(R.string.locationPositioning));
                 showToast("アシストデータ削除中");
             }else if(receiveCategory.equals(categoryColdStop)){
                 L.d("ReceiceColdStop");
                 showToast("アシストデータ削除終了");
             }else if(receiveCategory.equals(categoryServiceStop)){
                 L.d("ServiceStop");
+                activity.showTextViewState(activity.getResources().getString(R.string.locationStop));
                 showToast("測位サービス終了");
                 activity.onBtnStart();
                 activity.offBtnStop();

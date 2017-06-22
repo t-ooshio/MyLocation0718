@@ -3,6 +3,8 @@
 
     <!--- MyLocationActivity用-->
     <string name="locationStart">測位開始</string>
+    <string name="locationWait">測位待機中</string>
+    <string name="locationPositioning">測位中</string>
     <string name="locationStop">測位停止</string>
     <string name="locationSetting">設定</string>
 

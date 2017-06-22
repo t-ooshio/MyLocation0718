@@ -72,12 +72,12 @@ public class MyLocationActivity extends AppCompatActivity {
     protected void onStart(){
         super.onStart();
         presenter.checkPermission();
-        presenter.showSetting();
+        presenter.mStart();
     }
     public void showTextViewResult(String str){
         tvResult.setText(str);
     }
-    public void showTextViewState(String str){tvState.setText(str);}
+    public void showTextViewState(String str){tvState.setText(str + "\n");}
     public void showTextViewSetting(String str){
         tvSetting.setText(str);
     }

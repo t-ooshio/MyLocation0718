@@ -19,7 +19,6 @@ public class SettingActivity extends AppCompatActivity {
 
     SettingPresenter settingPresenter;
 
-    private Button buttonSet;
     private EditText editTextCount;
     private EditText editTextTimeout;
     private EditText editTextInterval;
@@ -39,7 +38,6 @@ public class SettingActivity extends AppCompatActivity {
 
         settingPresenter = new SettingPresenter(this);
 
-        buttonSet = (Button)findViewById(R.id.buttonSetting);
         editTextCount = (EditText)findViewById(R.id.editTextCount);
         editTextTimeout = (EditText)findViewById(R.id.editTextTimeout);
         editTextInterval = (EditText)findViewById(R.id.editTextInterval);
@@ -151,5 +149,10 @@ public class SettingActivity extends AppCompatActivity {
         //TODO: 戻るボタンを押されたときにSetting
         settingPresenter.commitSetting();
         super.onDestroy();
+    }
+    @Override
+    protected void onPause(){
+        settingPresenter.commitSetting();
+        super.onPause();
     }
 }
