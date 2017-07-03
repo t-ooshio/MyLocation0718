@@ -18,6 +18,10 @@
         </activity>
         <activity android:name=".Activity.SettingActivity"></activity>
         <service android:name=".Service.UebService"></service>
+        <service android:name=".Service.UeaService"></service>
+        <service android:name=".Service.NetworkService"></service>
+        <service android:name=".Service.IareaService"></service>
+        <service android:name=".Service.FlpService"></service>
     </application>
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"></uses-permission>

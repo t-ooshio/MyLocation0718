@@ -15,6 +15,10 @@ import jp.sio.testapp.mylocation.Activity.MyLocationActivity;
 import jp.sio.testapp.mylocation.Activity.SettingActivity;
 import jp.sio.testapp.mylocation.L;
 import jp.sio.testapp.mylocation.R;
+import jp.sio.testapp.mylocation.Service.FlpService;
+import jp.sio.testapp.mylocation.Service.IareaService;
+import jp.sio.testapp.mylocation.Service.NetworkService;
+import jp.sio.testapp.mylocation.Service.UeaService;
 import jp.sio.testapp.mylocation.Service.UebService;
 import jp.sio.testapp.mylocation.Usecase.MyLocationUsecase;
 import jp.sio.testapp.mylocation.Usecase.SettingUsecase ;
@@ -40,6 +44,10 @@ public class MyLocationPresenter {
     private String categoryServiceStop;
 
     private UebService uebService;
+    private UeaService ueaService;
+    private NetworkService networkService;
+    private IareaService iareaService;
+    private FlpService flpService;
 
     private String locationType;
     private int count;
@@ -58,6 +66,51 @@ public class MyLocationPresenter {
         @Override
         public void onServiceDisconnected(ComponentName name) {
             uebService = null;
+        }
+    };
+
+    private ServiceConnection serviceConnectionUea = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder service) {
+            ueaService = ((UeaService.UeaService_Binder)service).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
+        }
+    };
+    private ServiceConnection serviceConnectionNetwork = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder service) {
+            networkService = ((NetworkService.NwService_Binder)service).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
+        }
+    };
+    private ServiceConnection serviceConnectionIarea = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder service) {
+            iareaService = ((IareaService.IareaService_Binder)service).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
+        }
+    };
+    private ServiceConnection serviceConnectionFlp = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder service) {
+            flpService = ((FlpService.FlpService_Binder)service).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
         }
     };
 
@@ -94,19 +147,46 @@ public class MyLocationPresenter {
     }
 
     public void locationStart(){
+        IntentFilter filter = null;
+        if(locationType.equals(activity.getResources().getString(R.string.locationUeb))) {
+            locationserviceIntent = new Intent(activity.getApplicationContext(), UebService.class);
+            filter = new IntentFilter(activity.getResources().getString(R.string.locationUeb));
+            activity.startService(locationserviceIntent);
+            activity.registerReceiver(locationReceiver,filter);
+            activity.bindService(locationserviceIntent,serviceConnectionUeb ,Context.BIND_AUTO_CREATE);
 
-        locationserviceIntent = new Intent(activity.getApplicationContext(),UebService.class);
+        }else if(locationType.equals(activity.getResources().getString(R.string.locationUea))){
+            locationserviceIntent = new Intent(activity.getApplicationContext(), UeaService.class);
+            setSetting(locationserviceIntent);
+            filter = new IntentFilter(activity.getResources().getString(R.string.locationUea));
+            activity.startService(locationserviceIntent);
+            activity.registerReceiver(locationReceiver,filter);
+            activity.bindService(locationserviceIntent,serviceConnectionUea ,Context.BIND_AUTO_CREATE);
 
-        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingCount),count);
-        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingTimeout),timeout);
-        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingInterval),interval);
-        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingIsCold),isCold);
-        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingSuplEndWaitTime),suplendwaittime);
-        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingDelAssistdataTime),delassisttime);
-        activity.startService(locationserviceIntent);
-        IntentFilter filter = new IntentFilter(activity.getResources().getString(R.string.locationUeb));
-        activity.registerReceiver(locationReceiver,filter);
-        activity.bindService(locationserviceIntent,serviceConnectionUeb ,Context.BIND_AUTO_CREATE);
+        }else if(locationType.equals(activity.getResources().getString(R.string.locationNw))){
+            locationserviceIntent = new Intent(activity.getApplicationContext(), NetworkService.class);
+            filter = new IntentFilter(activity.getResources().getString(R.string.locationNw));
+            activity.startService(locationserviceIntent);
+            activity.registerReceiver(locationReceiver,filter);
+            activity.bindService(locationserviceIntent,serviceConnectionNetwork ,Context.BIND_AUTO_CREATE);
+
+        }else if(locationType.equals(activity.getResources().getString(R.string.locationiArea))){
+            locationserviceIntent = new Intent(activity.getApplicationContext(), IareaService.class);
+            filter = new IntentFilter(activity.getResources().getString(R.string.locationiArea));
+            activity.startService(locationserviceIntent);
+            activity.registerReceiver(locationReceiver,filter);
+            activity.bindService(locationserviceIntent,serviceConnectionIarea ,Context.BIND_AUTO_CREATE);
+
+        }else if(locationType.equals(activity.getResources().getString(R.string.locationFlp))){
+            locationserviceIntent = new Intent(activity.getApplicationContext(), FlpService.class);
+            filter = new IntentFilter(activity.getResources().getString(R.string.locationFlp));
+            activity.startService(locationserviceIntent);
+            activity.registerReceiver(locationReceiver,filter);
+            activity.bindService(locationserviceIntent,serviceConnectionFlp ,Context.BIND_AUTO_CREATE);
+
+        }else{
+            showToast("予期せぬ測位方式");
+        }
     }
 
     public void locationStop(){
@@ -156,5 +236,14 @@ public class MyLocationPresenter {
                 activity.onBtnSetting();
             }
         }
+    }
+    private void setSetting(Intent locationServiceIntent){
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingCount),count);
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingTimeout),timeout);
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingInterval),interval);
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingIsCold),isCold);
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingSuplEndWaitTime),suplendwaittime);
+        locationserviceIntent.putExtra(activity.getResources().getString(R.string.settingDelAssistdataTime),delassisttime);
+
     }
 }
