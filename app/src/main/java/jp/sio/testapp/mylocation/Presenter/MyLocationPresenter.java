@@ -32,10 +32,11 @@ import jp.sio.testapp.mylocation.Usecase.SettingUsecase ;
 
 public class MyLocationPresenter {
     private MyLocationActivity activity;
-    SettingUsecase settingUsecase;
-    MyLocationUsecase myLocationUsecase;
-    Intent settingIntent;
-    Intent locationserviceIntent;
+    private SettingUsecase settingUsecase;
+    private MyLocationUsecase myLocationUsecase;
+    private Intent settingIntent;
+    private Intent locationserviceIntent;
+    private ServiceConnection runService;
 
     private String receiveCategory;
     private String categoryLocation;
@@ -132,6 +133,7 @@ public class MyLocationPresenter {
     }
 
     public void mStart(){
+        activity.offBtnStop();
         locationType = settingUsecase.getLocationType();
         count = settingUsecase.getCount();
         timeout = settingUsecase.getTimeout();
@@ -150,47 +152,41 @@ public class MyLocationPresenter {
         IntentFilter filter = null;
         if(locationType.equals(activity.getResources().getString(R.string.locationUeb))) {
             locationserviceIntent = new Intent(activity.getApplicationContext(), UebService.class);
+            runService = serviceConnectionUeb;
             filter = new IntentFilter(activity.getResources().getString(R.string.locationUeb));
-            activity.startService(locationserviceIntent);
-            activity.registerReceiver(locationReceiver,filter);
-            activity.bindService(locationserviceIntent,serviceConnectionUeb ,Context.BIND_AUTO_CREATE);
 
         }else if(locationType.equals(activity.getResources().getString(R.string.locationUea))){
             locationserviceIntent = new Intent(activity.getApplicationContext(), UeaService.class);
+            runService = serviceConnectionUea;
             setSetting(locationserviceIntent);
             filter = new IntentFilter(activity.getResources().getString(R.string.locationUea));
-            activity.startService(locationserviceIntent);
-            activity.registerReceiver(locationReceiver,filter);
-            activity.bindService(locationserviceIntent,serviceConnectionUea ,Context.BIND_AUTO_CREATE);
 
         }else if(locationType.equals(activity.getResources().getString(R.string.locationNw))){
             locationserviceIntent = new Intent(activity.getApplicationContext(), NetworkService.class);
+            runService = serviceConnectionNetwork;
             filter = new IntentFilter(activity.getResources().getString(R.string.locationNw));
-            activity.startService(locationserviceIntent);
-            activity.registerReceiver(locationReceiver,filter);
-            activity.bindService(locationserviceIntent,serviceConnectionNetwork ,Context.BIND_AUTO_CREATE);
 
         }else if(locationType.equals(activity.getResources().getString(R.string.locationiArea))){
             locationserviceIntent = new Intent(activity.getApplicationContext(), IareaService.class);
+            runService = serviceConnectionIarea;
             filter = new IntentFilter(activity.getResources().getString(R.string.locationiArea));
-            activity.startService(locationserviceIntent);
-            activity.registerReceiver(locationReceiver,filter);
-            activity.bindService(locationserviceIntent,serviceConnectionIarea ,Context.BIND_AUTO_CREATE);
 
         }else if(locationType.equals(activity.getResources().getString(R.string.locationFlp))){
             locationserviceIntent = new Intent(activity.getApplicationContext(), FlpService.class);
+            runService = serviceConnectionFlp;
             filter = new IntentFilter(activity.getResources().getString(R.string.locationFlp));
-            activity.startService(locationserviceIntent);
-            activity.registerReceiver(locationReceiver,filter);
-            activity.bindService(locationserviceIntent,serviceConnectionFlp ,Context.BIND_AUTO_CREATE);
 
         }else{
             showToast("予期せぬ測位方式");
         }
+        activity.startService(locationserviceIntent);
+        activity.registerReceiver(locationReceiver,filter);
+        activity.bindService(locationserviceIntent,runService ,Context.BIND_AUTO_CREATE);
+
     }
 
     public void locationStop(){
-        activity.unbindService(serviceConnectionUeb);
+        activity.unbindService(runService);
         activity.stopService(locationserviceIntent);
     }
 

@@ -1,6 +1,7 @@
 package jp.sio.testapp.mylocation.Repository;
 
 import android.content.Context;
+import android.content.Intent;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Environment;
@@ -87,8 +88,8 @@ public class LocationLog {
      *
      */
     public void endLogFile(){
-        try {
             scanFile();
+        try {
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -99,16 +100,11 @@ public class LocationLog {
      * ログファイルを端末再起動無しでも読み込むための処理
      * ファイルインデックスを作成しなおせば良いと見たのでそれを実装
      */
-    public void scanFile(){
-        MediaScannerConnection.OnScanCompletedListener listener = new MediaScannerConnection.OnScanCompletedListener() {
-            @Override
-            public void onScanCompleted(String path, Uri uri) {
-
-            }
-        };
-        MediaScannerConnection.scanFile(context, new String[]{filePath}, new String[]{"txt"},listener);
+    public void scanFile() {
+        Uri contentUri = Uri.fromFile(file);
+        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, contentUri);
+        context.sendBroadcast(mediaScanIntent);
     }
-
 
     //externalStrageのReadとWriteが可能かチェック
     private boolean isExternalStrageWriteable(){

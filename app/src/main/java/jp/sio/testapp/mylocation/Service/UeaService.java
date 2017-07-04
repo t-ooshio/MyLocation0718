@@ -84,8 +84,8 @@ public class UeaService extends Service implements LocationListener {
         intervalHandler = new Handler();
         stopHandler = new Handler();
 
-        settingHeader = getResources().getString(R.string.settingHeader) + "\n";
-        locationHeader = getResources().getString(R.string.locationHeader) + "\n";
+        settingHeader = getResources().getString(R.string.settingHeader) ;
+        locationHeader = getResources().getString(R.string.locationHeader) ;
 
     }
 
@@ -120,9 +120,9 @@ public class UeaService extends Service implements LocationListener {
         locationLog = new LocationLog(this);
         locationLog.makeLogFile(settingHeader);
         locationLog.writeLog(
-                locationType + "," + settingCount + "," + settingTimeout
-                        + "," + settingInterval + "," + settingSuplEndWaitTime + ","
-                        + settingDelAssistdatatime + "," + settingIsCold);
+                locationType + "," + settingCount + "," + settingTimeout/1000
+                        + "," + settingInterval/1000 + "," + settingSuplEndWaitTime/1000 + ","
+                        + settingDelAssistdatatime/1000 + "," + settingIsCold);
         locationLog.writeLog(locationHeader);
         L.d("count:" + settingCount + " Timeout:" + settingTimeout + " Interval:" + settingInterval);
         L.d("suplendwaittime" + settingSuplEndWaitTime + " " + "DelAssist" + settingDelAssistdatatime);
@@ -349,7 +349,7 @@ public class UeaService extends Service implements LocationListener {
      */
     protected void sendLocationBroadCast(Boolean fix,double lattude,double longitude,double ttff){
         L.d("sendLocation");
-        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUeb));
+        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUea));
         broadcastIntent.putExtra(getResources().getString(R.string.category),getResources().getString(R.string.categoryLocation));
         broadcastIntent.putExtra(getResources().getString(R.string.TagisFix),fix);
         broadcastIntent.putExtra(getResources().getString(R.string.TagLat),lattude);
@@ -365,7 +365,7 @@ public class UeaService extends Service implements LocationListener {
      * @param category
      */
     protected void sendColdBroadCast(String category){
-        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUeb));
+        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUea));
 
         if(category.equals(getResources().getString(R.string.categoryColdStart))){
             L.d("ColdStart");
