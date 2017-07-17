@@ -83,8 +83,8 @@ public class UebService extends Service implements LocationListener {
         intervalHandler = new Handler();
         stopHandler = new Handler();
 
-        settingHeader = getResources().getString(R.string.settingHeader) + "\n";
-        locationHeader = getResources().getString(R.string.locationHeader) + "\n";
+        settingHeader = getResources().getString(R.string.settingHeader) ;
+        locationHeader = getResources().getString(R.string.locationHeader);
 
     }
 

@@ -152,27 +152,31 @@ public class MyLocationPresenter {
         IntentFilter filter = null;
         if(locationType.equals(activity.getResources().getString(R.string.locationUeb))) {
             locationserviceIntent = new Intent(activity.getApplicationContext(), UebService.class);
+            setSetting(locationserviceIntent);
             runService = serviceConnectionUeb;
             filter = new IntentFilter(activity.getResources().getString(R.string.locationUeb));
 
         }else if(locationType.equals(activity.getResources().getString(R.string.locationUea))){
             locationserviceIntent = new Intent(activity.getApplicationContext(), UeaService.class);
-            runService = serviceConnectionUea;
             setSetting(locationserviceIntent);
+            runService = serviceConnectionUea;
             filter = new IntentFilter(activity.getResources().getString(R.string.locationUea));
 
         }else if(locationType.equals(activity.getResources().getString(R.string.locationNw))){
             locationserviceIntent = new Intent(activity.getApplicationContext(), NetworkService.class);
+            setSetting(locationserviceIntent);
             runService = serviceConnectionNetwork;
             filter = new IntentFilter(activity.getResources().getString(R.string.locationNw));
 
         }else if(locationType.equals(activity.getResources().getString(R.string.locationiArea))){
             locationserviceIntent = new Intent(activity.getApplicationContext(), IareaService.class);
+            setSetting(locationserviceIntent);
             runService = serviceConnectionIarea;
             filter = new IntentFilter(activity.getResources().getString(R.string.locationiArea));
 
         }else if(locationType.equals(activity.getResources().getString(R.string.locationFlp))){
             locationserviceIntent = new Intent(activity.getApplicationContext(), FlpService.class);
+            setSetting(locationserviceIntent);
             runService = serviceConnectionFlp;
             filter = new IntentFilter(activity.getResources().getString(R.string.locationFlp));
 

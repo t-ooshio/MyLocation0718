@@ -5,13 +5,20 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.FusedLocationProviderApi;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationListener;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -23,15 +30,18 @@ import jp.sio.testapp.mylocation.R;
 import jp.sio.testapp.mylocation.Repository.LocationLog;
 
 /**
- * UEBからコピーしたて　作成中
  * FLP測位を行うためのService
- * 測位回数、測位間隔、タイムアウト、SuplEndWaitTimeあたりが渡されればいいか？
  * Created by NTT docomo on 2017/05/22.
  */
 
-public class FlpService extends Service implements LocationListener {
+public class FlpService extends Service implements
+        LocationListener,
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener{
 
-    private LocationManager locationManager;
+    private GoogleApiClient mGoogleApiClient;
+    private FusedLocationProviderApi fusedLocationProviderApi;
+    private LocationRequest locationRequest;
     private LocationLog locationLog;
     private PowerManager powerManager;
     private PowerManager.WakeLock wakeLock;
@@ -45,7 +55,7 @@ public class FlpService extends Service implements LocationListener {
     private IntervalTimerTask intervalTimerTask;
 
     //設定値の格納用変数
-    private final String locationType = "UEB";
+    private final String locationType = "flp";
     private int settingCount;   // 0の場合は無制限に測位を続ける
     private long settingInterval;
     private long settingTimeout;
@@ -70,6 +80,29 @@ public class FlpService extends Service implements LocationListener {
     private String settingHeader;
     private String locationHeader;
 
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        L.d("onCennected");
+        locationStart();
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        L.d("onConnectionSuspended");
+        if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_NETWORK_LOST) {
+            L.d("Connection lost.  Cause: Network Lost.");
+        } else if (i == GoogleApiClient.ConnectionCallbacks.CAUSE_SERVICE_DISCONNECTED) {
+            L.d("Connection lost.  Reason: Service Disconnected");
+        }
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        L.d("onCennectionFailed");
+        L.d(connectionResult.getErrorCode() + "");
+        L.d(connectionResult.getErrorMessage());
+    }
+
     public class FlpService_Binder extends Binder {
         public FlpService getService() {
             return FlpService.this;
@@ -84,9 +117,14 @@ public class FlpService extends Service implements LocationListener {
         intervalHandler = new Handler();
         stopHandler = new Handler();
 
-        settingHeader = getResources().getString(R.string.settingHeader) + "\n";
-        locationHeader = getResources().getString(R.string.locationHeader) + "\n";
+        settingHeader = getResources().getString(R.string.settingHeader);
+        locationHeader = getResources().getString(R.string.locationHeader);
 
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(LocationServices.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
     }
 
     @Override
@@ -103,7 +141,7 @@ public class FlpService extends Service implements LocationListener {
         //画面が消灯しないようにPowerManagerを使用
         powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
         //PowerManagerの画面つけっぱなし設定SCREEN_BRIGHT_WAKE_LOCK、非推奨の設定値だが試験アプリ的にはあったほうがいいので使用
-        wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, getString(R.string.locationUeb));
+        wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, getString(R.string.locationFlp));
         wakeLock.acquire();
 
         //設定値の取得
@@ -126,8 +164,14 @@ public class FlpService extends Service implements LocationListener {
         locationLog.writeLog(locationHeader);
         L.d("count:" + settingCount + " Timeout:" + settingTimeout + " Interval:" + settingInterval);
         L.d("suplendwaittime" + settingSuplEndWaitTime + " " + "DelAssist" + settingDelAssistdatatime);
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        locationStart();
+
+        fusedLocationProviderApi = LocationServices.FusedLocationApi;
+        locationRequest = LocationRequest.create();
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+
+        if(!mGoogleApiClient.isConnected()){
+            mGoogleApiClient.connect();
+        }
 
         return START_STICKY;
     }
@@ -140,11 +184,11 @@ public class FlpService extends Service implements LocationListener {
         L.d("locationStart");
 
         if (settingIsCold) {
-            coldLocation(locationManager);
+            coldLocation(fusedLocationProviderApi,mGoogleApiClient);
         }
         locationStartTime = System.currentTimeMillis();
         //MyLocationUsecaseで起動時にPermissionCheckを行っているのでここでは行わない
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+        fusedLocationProviderApi.requestLocationUpdates(mGoogleApiClient,locationRequest,this);
         L.d("requestLocationUpdates");
 
         //測位停止Timerの設定
@@ -189,8 +233,8 @@ public class FlpService extends Service implements LocationListener {
             L.d(e.getMessage());
             e.printStackTrace();
         }
-        if(locationManager != null) {
-            locationManager.removeUpdates(this);
+        if(fusedLocationProviderApi != null) {
+            fusedLocationProviderApi.removeLocationUpdates(mGoogleApiClient, this);
         }
 
         //測位回数が設定値に到達しているかチェック
@@ -216,7 +260,7 @@ public class FlpService extends Service implements LocationListener {
         locationStopTime = System.currentTimeMillis();
         runningCount++;
         isLocationFix = false;
-        locationManager.removeUpdates(this);
+        fusedLocationProviderApi.removeLocationUpdates(mGoogleApiClient,this);
         ttff = (locationStopTime - locationStartTime) / 1000;
 
         //測位結果の通知
@@ -250,9 +294,14 @@ public class FlpService extends Service implements LocationListener {
      */
     public void serviceStop(){
         L.d("serviceStop");
-        if(locationManager != null){
-            locationManager.removeUpdates(this);
-            locationManager = null;
+        if(fusedLocationProviderApi != null){
+            fusedLocationProviderApi.removeLocationUpdates(mGoogleApiClient,this);
+            fusedLocationProviderApi = null;
+        }
+
+        if(mGoogleApiClient != null){
+            mGoogleApiClient.disconnect();
+            mGoogleApiClient = null;
         }
         if(stopTimer != null){
             stopTimer.cancel();
@@ -289,10 +338,10 @@ public class FlpService extends Service implements LocationListener {
     /**
      * アシストデータの削除
      */
-    private void coldLocation(LocationManager lm){
+    private void coldLocation(FusedLocationProviderApi flp,GoogleApiClient client){
         sendColdBroadCast(getResources().getString(R.string.categoryColdStart));
         L.d("coldBroadcast:" + getResources().getString(R.string.categoryColdStart));
-        boolean coldResult = lm.sendExtraCommand(LocationManager.GPS_PROVIDER,"delete_aiding_data",null);
+        flp.flushLocations(client);
         try {
             Thread.sleep(settingDelAssistdatatime);
         } catch (InterruptedException e) {
@@ -300,7 +349,6 @@ public class FlpService extends Service implements LocationListener {
             e.printStackTrace();
         }
 
-        L.d("delete_aiding_data:result " + coldResult);
         sendColdBroadCast(getResources().getString(R.string.categoryColdStop));
     }
 
@@ -349,7 +397,7 @@ public class FlpService extends Service implements LocationListener {
      */
     protected void sendLocationBroadCast(Boolean fix,double lattude,double longitude,double ttff){
         L.d("sendLocation");
-        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUeb));
+        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationFlp));
         broadcastIntent.putExtra(getResources().getString(R.string.category),getResources().getString(R.string.categoryLocation));
         broadcastIntent.putExtra(getResources().getString(R.string.TagisFix),fix);
         broadcastIntent.putExtra(getResources().getString(R.string.TagLat),lattude);
@@ -365,7 +413,7 @@ public class FlpService extends Service implements LocationListener {
      * @param category
      */
     protected void sendColdBroadCast(String category){
-        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUeb));
+        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationFlp));
 
         if(category.equals(getResources().getString(R.string.categoryColdStart))){
             L.d("ColdStart");
@@ -381,23 +429,12 @@ public class FlpService extends Service implements LocationListener {
      * Serviceを破棄することを通知するBroadcast
      */
     protected void sendServiceEndBroadCast(){
-        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUeb));
+        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationFlp));
+        broadcastIntent.putExtra(getResources().getString(R.string.category),getResources().getString(R.string.categoryServiceEnd));
         broadcastIntent.putExtra(getResources().getString(R.string.category),getResources().getString(R.string.categoryServiceEnd));
         sendBroadcast(broadcastIntent);
     }
 
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-
-    }
-    @Override
-    public void onProviderEnabled(String provider) {
-
-    }
-    @Override
-    public void onProviderDisabled(String provider) {
-
-    }
     @Override
     public boolean onUnbind(Intent intent) {
         return true; // 再度クライアントから接続された際に onRebind を呼び出させる場合は true を返す

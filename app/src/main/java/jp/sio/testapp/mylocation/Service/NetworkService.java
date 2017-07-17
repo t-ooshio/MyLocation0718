@@ -23,9 +23,7 @@ import jp.sio.testapp.mylocation.R;
 import jp.sio.testapp.mylocation.Repository.LocationLog;
 
 /**
- * UEBからコピーしたて　作成中
  * Network測位を行うためのService
- * 測位回数、測位間隔、タイムアウト、SuplEndWaitTimeあたりが渡されればいいか？
  * Created by NTT docomo on 2017/05/22.
  */
 
@@ -84,8 +82,8 @@ public class NetworkService extends Service implements LocationListener {
         intervalHandler = new Handler();
         stopHandler = new Handler();
 
-        settingHeader = getResources().getString(R.string.settingHeader) + "\n";
-        locationHeader = getResources().getString(R.string.locationHeader) + "\n";
+        settingHeader = getResources().getString(R.string.settingHeader);
+        locationHeader = getResources().getString(R.string.locationHeader);
 
     }
 
@@ -103,7 +101,7 @@ public class NetworkService extends Service implements LocationListener {
         //画面が消灯しないようにPowerManagerを使用
         powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
         //PowerManagerの画面つけっぱなし設定SCREEN_BRIGHT_WAKE_LOCK、非推奨の設定値だが試験アプリ的にはあったほうがいいので使用
-        wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, getString(R.string.locationUeb));
+        wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, getString(R.string.locationNw));
         wakeLock.acquire();
 
         //設定値の取得
@@ -349,7 +347,7 @@ public class NetworkService extends Service implements LocationListener {
      */
     protected void sendLocationBroadCast(Boolean fix,double lattude,double longitude,double ttff){
         L.d("sendLocation");
-        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUeb));
+        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationNw));
         broadcastIntent.putExtra(getResources().getString(R.string.category),getResources().getString(R.string.categoryLocation));
         broadcastIntent.putExtra(getResources().getString(R.string.TagisFix),fix);
         broadcastIntent.putExtra(getResources().getString(R.string.TagLat),lattude);
@@ -365,7 +363,7 @@ public class NetworkService extends Service implements LocationListener {
      * @param category
      */
     protected void sendColdBroadCast(String category){
-        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUeb));
+        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationNw));
 
         if(category.equals(getResources().getString(R.string.categoryColdStart))){
             L.d("ColdStart");
@@ -381,7 +379,7 @@ public class NetworkService extends Service implements LocationListener {
      * Serviceを破棄することを通知するBroadcast
      */
     protected void sendServiceEndBroadCast(){
-        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationUeb));
+        Intent broadcastIntent = new Intent(getResources().getString(R.string.locationNw));
         broadcastIntent.putExtra(getResources().getString(R.string.category),getResources().getString(R.string.categoryServiceEnd));
         sendBroadcast(broadcastIntent);
     }
