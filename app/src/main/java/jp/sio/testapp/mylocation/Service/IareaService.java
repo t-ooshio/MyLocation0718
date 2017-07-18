@@ -177,6 +177,7 @@ public class IareaService extends Service implements LocationListener {
             protected void onPostExecute(JSONObject result) {
                 //TODO JSONオブジェクトの解析処理
                 //TODO 測位の成否、緯度経度TTFFとかをJSONオブジェクトから取得する
+                L.d("TestonPostExecute");
             }
 
         };
